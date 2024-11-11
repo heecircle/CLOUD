@@ -3,12 +3,15 @@ package com.heewon.cloud.file.domain;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 import com.heewon.cloud.common.base.BaseTimeEntity;
+import com.heewon.cloud.folder.domain.FolderInfo;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,15 +41,15 @@ public class FileInfo extends BaseTimeEntity {
 	@Column
 	private String type; // 파일 종류
 
-	@Column(nullable = true)
-	private String file; // 파일
+	@JoinColumn(nullable = true)
+	@ManyToOne
+	private FolderInfo parentFolder; // 파일
 
 	@Builder
-	public FileInfo(String userInfo, Long size, String name, String type, String file) {
+	public FileInfo(String userInfo, Long size, String name, String type) {
 		this.userInfo = userInfo;
 		this.size = size;
 		this.name = name;
 		this.type = type;
-		this.file = file;
 	}
 }
