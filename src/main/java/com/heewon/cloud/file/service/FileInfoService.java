@@ -50,7 +50,6 @@ public class FileInfoService {
 			.size(file.getSize())
 			.type(type)
 			.userInfo(userInfo)
-			.file(fileName)
 			.build();
 
 		fileInfoRepository.save(saveFile);
