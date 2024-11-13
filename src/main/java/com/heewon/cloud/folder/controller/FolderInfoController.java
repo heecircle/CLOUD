@@ -26,12 +26,9 @@ public class FolderInfoController {
 
 	@PostMapping("/save")
 	public void makeFolder(@RequestBody FolderSaveRequest folderSaveRequest) {
-		String folderString =
-			folderSaveRequest.getRootFolder().isEmpty() ? "" : folderSaveRequest.getRootFolder() + "/";
-
 		folderService.saveFolder(
-			folderString +
-				folderSaveRequest.getFolderName(),
+			folderSaveRequest.getRootFolder(),
+			folderSaveRequest.getFolderName(),
 			folderSaveRequest.getUserInfo());
 	}
 
