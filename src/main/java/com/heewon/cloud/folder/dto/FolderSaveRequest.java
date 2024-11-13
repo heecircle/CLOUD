@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FolderSaveRequest {
+	private String rootFolder;
 	private String folderName;
 	private String userInfo;
 }

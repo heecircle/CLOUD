@@ -5,17 +5,21 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystemAlreadyExistsException;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.webjars.NotFoundException;
 
 import com.heewon.cloud.file.domain.FileInfo;
 import com.heewon.cloud.file.dto.FileGetResponse;
 import com.heewon.cloud.file.repository.FileInfoRepository;
+import com.heewon.cloud.folder.domain.FolderInfo;
+import com.heewon.cloud.folder.service.FolderService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,16 +27,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FileInfoService {
 	private final FileInfoRepository fileInfoRepository;
+	private final FolderService folderService;
 	private final String rootPath = System.getenv("ROOT_PATH");
 
 	public FileInfo getFileInfo(String userInfo, String fileName) {
 		return fileInfoRepository.findFileInfoByNameAndUserInfo(fileName, userInfo);
 	}
 
-	public void fileSave(MultipartFile file, String userInfo, String rootPath) throws IOException {
+	@Transactional
+	public void fileSave(MultipartFile file, String userInfo, String rootPath, String savePath) throws IOException {
 
 		String fileName = file.getOriginalFilename();
-		FileInfo existFile = getFileInfo(userInfo, fileName);
+		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, savePath);
+
 		String type = "";
 		try {
 			assert fileName != null;
@@ -41,8 +48,14 @@ public class FileInfoService {
 			System.out.println("확장자 명이 없습니다.");
 		}
 
-		if (existFile != null) {
-			throw new IOException("이미 존재하는 파일입니다.");
+		if (folderInfo == null) {
+			throw new NotFoundException("존재하지 않는 폴더입니다.");
+		}
+
+		for (FileInfo child : folderInfo.getFileInfoList()) {
+			if (child.getName().equals(fileName)) {
+				throw new FileSystemAlreadyExistsException("이미 존재하는 파일입니다.");
+			}
 		}
 
 		FileInfo saveFile = FileInfo.builder()
@@ -50,9 +63,12 @@ public class FileInfoService {
 			.size(file.getSize())
 			.type(type)
 			.userInfo(userInfo)
+			.folderInfo(folderInfo)
 			.build();
 
 		fileInfoRepository.save(saveFile);
+
+		folderInfo.getFileInfoList().add(saveFile);
 
 		String fileDescriptor = saveFile.getIdentifier();
 
@@ -63,8 +79,21 @@ public class FileInfoService {
 
 	}
 
-	public FileGetResponse getFile(String userInfo, String fileName) throws UnsupportedEncodingException {
-		FileInfo fileInfo = getFileInfo(userInfo, fileName);
+	public FileGetResponse getFile(String userInfo, String fileName, String folderName) throws
+		UnsupportedEncodingException {
+		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, folderName);
+
+		if (folderInfo == null) {
+			throw new NotFoundException("존재하지 않는 폴더 입니다.");
+		}
+		FileInfo fileInfo = null;
+		for (FileInfo child : folderInfo.getFileInfoList()) {
+			if (child.getName().equals(fileName)) {
+				fileInfo = child;
+				break;
+			}
+		}
+		
 		if (fileInfo == null) {
 			throw new NotFoundException("존재하지 않는 파일입니다.");
 		}
@@ -97,7 +126,6 @@ public class FileInfoService {
 		}
 
 		return MediaType.APPLICATION_OCTET_STREAM_VALUE;
-
 	}
 
 }

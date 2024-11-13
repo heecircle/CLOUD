@@ -2,11 +2,15 @@ package com.heewon.cloud.folder.domain;
 
 import java.util.List;
 
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import com.heewon.cloud.common.base.BaseTimeEntity;
 import com.heewon.cloud.file.domain.FileInfo;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,13 +22,16 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 @Entity
-public class FolderInfo {
+@ToString
+public class FolderInfo extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
