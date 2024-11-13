@@ -17,6 +17,7 @@ import org.webjars.NotFoundException;
 
 import com.heewon.cloud.file.domain.FileInfo;
 import com.heewon.cloud.file.dto.FileGetResponse;
+import com.heewon.cloud.file.dto.FileMoveRequest;
 import com.heewon.cloud.file.repository.FileInfoRepository;
 import com.heewon.cloud.folder.domain.FolderInfo;
 import com.heewon.cloud.folder.service.FolderService;
@@ -93,7 +94,7 @@ public class FileInfoService {
 				break;
 			}
 		}
-		
+
 		if (fileInfo == null) {
 			throw new NotFoundException("존재하지 않는 파일입니다.");
 		}
@@ -113,19 +114,47 @@ public class FileInfoService {
 
 	public String fileType(String type) {
 
-		if (type.equals("png")) {
-			return MediaType.IMAGE_PNG_VALUE;
+		return switch (type) {
+			case "png" -> MediaType.IMAGE_PNG_VALUE;
+			case "jpg", "jpeg" -> MediaType.IMAGE_JPEG_VALUE;
+			case "gif" -> MediaType.IMAGE_GIF_VALUE;
+			default -> MediaType.APPLICATION_OCTET_STREAM_VALUE;
+		};
+
+	}
+
+	@Transactional
+	public void fileMove(FileMoveRequest fileMoveRequest) {
+		FolderInfo folderInfo = folderService.findFolderRoot(fileMoveRequest.getUserInfo(), fileMoveRequest.getFrom());
+		FolderInfo getNextFolder = folderService.findFolderRoot(fileMoveRequest.getUserInfo(), fileMoveRequest.getTo());
+		FileInfo fileInfo = null;
+
+		if (getNextFolder == null) {
+			throw new NotFoundException("존재하지 않는 폴더입니다.");
 		}
 
-		if (type.equals("jpg") || type.equals("jpeg")) {
-			return MediaType.IMAGE_JPEG_VALUE;
+		for (FileInfo child : getNextFolder.getFileInfoList()) {
+			if (child.getName().equals(fileMoveRequest.getFileName())) {
+				throw new FileSystemAlreadyExistsException("이미 존재하는 파일이름입니다.");
+			}
 		}
 
-		if (type.equals("gif")) {
-			return MediaType.IMAGE_GIF_VALUE;
+		for (FileInfo child : folderInfo.getFileInfoList()) {
+			if (child.getName().equals(fileMoveRequest.getFileName())) {
+				fileInfo = child;
+				break;
+			}
 		}
 
-		return MediaType.APPLICATION_OCTET_STREAM_VALUE;
+		folderInfo.getFileInfoList().remove(fileInfo);
+
+		if (fileInfo == null) {
+			throw new NotFoundException("파일이 존재하지 않습니다.");
+		}
+
+		getNextFolder.getFileInfoList().add(fileInfo);
+		fileInfo.setParentFolder(getNextFolder);
+
 	}
 
 }

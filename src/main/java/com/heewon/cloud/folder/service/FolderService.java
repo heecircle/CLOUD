@@ -1,5 +1,6 @@
 package com.heewon.cloud.folder.service;
 
+import java.nio.file.FileSystemAlreadyExistsException;
 import java.util.ArrayList;
 
 import org.springframework.stereotype.Service;
@@ -131,6 +132,63 @@ public class FolderService {
 		}
 
 		return folderInfo;
+
+	}
+
+	@Transactional
+	public void deleteFolder(String userInfo, String path) {
+		FolderInfo folderInfo = findFolderRoot(userInfo, path);
+		folderInfoRepository.delete(folderInfo);
+	}
+
+	public void moveFolder(String userInfo, String oldPath, String newPath, String folderName) {
+		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+		System.out.println(userInfo + " " + oldPath + " " + newPath + " " + folderName);
+		FolderInfo oldFolder = null;
+		FolderInfo newFolder = null;
+
+		newFolder = findFolderRoot(userInfo, newPath);
+		oldFolder = findFolderRoot(userInfo, oldPath);
+		// System.out.println(oldFolder + " " + newFolder);
+
+		if (oldFolder == null) {
+			System.out.println("old folder is null");
+		}
+		if (newFolder == null) {
+			System.out.println("new folder is null");
+		}
+
+		// if (oldFolder == null || newFolder == null) {
+		// 	throw new NotFoundException("존재하지 않는 폴더입니다.");
+		// }
+
+		FolderInfo curr = null;
+
+		for (FolderInfo info : newFolder.getChildrenFolder()) {
+			if (info.getFolderName().equals(folderName)) {
+				throw new FileSystemAlreadyExistsException("이미 존재하는 파일입니다.");
+			}
+		}
+
+		for (FolderInfo info : oldFolder.getChildrenFolder()) {
+			if (info.getFolderName().equals(folderName)) {
+				curr = info;
+				break;
+			}
+		}
+
+		oldFolder.getChildrenFolder().remove(curr);
+
+		if (curr == null) {
+			throw new NotFoundException("존재하지 않는 폴더입니다.");
+		}
+
+		curr.setParentFolder(newFolder);
+		newFolder.getChildrenFolder().add(curr);
+
+		folderInfoRepository.save(curr);
+		folderInfoRepository.save(oldFolder);
+		folderInfoRepository.save(newFolder);
 
 	}
 }
