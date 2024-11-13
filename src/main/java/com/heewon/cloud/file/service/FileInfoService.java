@@ -93,7 +93,7 @@ public class FileInfoService {
 				break;
 			}
 		}
-		
+
 		if (fileInfo == null) {
 			throw new NotFoundException("존재하지 않는 파일입니다.");
 		}
@@ -113,19 +113,13 @@ public class FileInfoService {
 
 	public String fileType(String type) {
 
-		if (type.equals("png")) {
-			return MediaType.IMAGE_PNG_VALUE;
-		}
+		return switch (type) {
+			case "png" -> MediaType.IMAGE_PNG_VALUE;
+			case "jpg", "jpeg" -> MediaType.IMAGE_JPEG_VALUE;
+			case "gif" -> MediaType.IMAGE_GIF_VALUE;
+			default -> MediaType.APPLICATION_OCTET_STREAM_VALUE;
+		};
 
-		if (type.equals("jpg") || type.equals("jpeg")) {
-			return MediaType.IMAGE_JPEG_VALUE;
-		}
-
-		if (type.equals("gif")) {
-			return MediaType.IMAGE_GIF_VALUE;
-		}
-
-		return MediaType.APPLICATION_OCTET_STREAM_VALUE;
 	}
 
 }
