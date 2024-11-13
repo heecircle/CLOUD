@@ -22,7 +22,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
 @Getter
 @Builder
@@ -30,7 +29,6 @@ import lombok.ToString;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Entity
-@ToString
 public class FolderInfo extends BaseTimeEntity {
 
 	@Id
@@ -44,6 +42,7 @@ public class FolderInfo extends BaseTimeEntity {
 	@Setter
 	private String folderName;
 
+	@Setter
 	@JoinColumn
 	@ManyToOne
 	private FolderInfo parentFolder;

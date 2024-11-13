@@ -139,14 +139,15 @@ public class FileInfoService {
 			}
 		}
 
-		for (FileInfo info : folderInfo.getFileInfoList()) {
-			if (info.getName().equals(fileMoveRequest.getFileName())) {
-				fileInfo = info;
-				getNextFolder.getFileInfoList().remove(info);
+		for (FileInfo child : folderInfo.getFileInfoList()) {
+			if (child.getName().equals(fileMoveRequest.getFileName())) {
+				fileInfo = child;
 				break;
 			}
-
 		}
+
+		folderInfo.getFileInfoList().remove(fileInfo);
+
 		if (fileInfo == null) {
 			throw new NotFoundException("파일이 존재하지 않습니다.");
 		}
