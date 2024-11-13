@@ -17,6 +17,7 @@ import org.webjars.NotFoundException;
 
 import com.heewon.cloud.file.domain.FileInfo;
 import com.heewon.cloud.file.dto.FileGetResponse;
+import com.heewon.cloud.file.dto.FileMoveRequest;
 import com.heewon.cloud.file.repository.FileInfoRepository;
 import com.heewon.cloud.folder.domain.FolderInfo;
 import com.heewon.cloud.folder.service.FolderService;
@@ -119,6 +120,39 @@ public class FileInfoService {
 			case "gif" -> MediaType.IMAGE_GIF_VALUE;
 			default -> MediaType.APPLICATION_OCTET_STREAM_VALUE;
 		};
+
+	}
+
+	@Transactional
+	public void fileMove(FileMoveRequest fileMoveRequest) {
+		FolderInfo folderInfo = folderService.findFolderRoot(fileMoveRequest.getUserInfo(), fileMoveRequest.getFrom());
+		FolderInfo getNextFolder = folderService.findFolderRoot(fileMoveRequest.getUserInfo(), fileMoveRequest.getTo());
+		FileInfo fileInfo = null;
+
+		if (getNextFolder == null) {
+			throw new NotFoundException("존재하지 않는 폴더입니다.");
+		}
+
+		for (FileInfo child : getNextFolder.getFileInfoList()) {
+			if (child.getName().equals(fileMoveRequest.getFileName())) {
+				throw new FileSystemAlreadyExistsException("이미 존재하는 파일이름입니다.");
+			}
+		}
+
+		for (FileInfo info : folderInfo.getFileInfoList()) {
+			if (info.getName().equals(fileMoveRequest.getFileName())) {
+				fileInfo = info;
+				getNextFolder.getFileInfoList().remove(info);
+				break;
+			}
+
+		}
+		if (fileInfo == null) {
+			throw new NotFoundException("파일이 존재하지 않습니다.");
+		}
+
+		getNextFolder.getFileInfoList().add(fileInfo);
+		fileInfo.setParentFolder(getNextFolder);
 
 	}
 

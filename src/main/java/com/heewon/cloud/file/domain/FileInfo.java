@@ -15,6 +15,7 @@ import jakarta.persistence.ManyToOne;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @NoArgsConstructor
@@ -41,6 +42,7 @@ public class FileInfo extends BaseTimeEntity {
 	@Column
 	private String type; // 파일 종류
 
+	@Setter
 	@JoinColumn
 	@ManyToOne
 	private FolderInfo parentFolder; // 파일
