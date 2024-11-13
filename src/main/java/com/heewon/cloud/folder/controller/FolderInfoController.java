@@ -1,5 +1,6 @@
 package com.heewon.cloud.folder.controller;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +42,11 @@ public class FolderInfoController {
 	@GetMapping("/info")
 	public FolderInfoResponse getFolderInfo(@RequestParam String folderName, @RequestParam String userName) {
 		return folderService.findFolderInfo(userName, folderName);
+	}
+
+	@DeleteMapping("/delete")
+	public void deleteFolder(@RequestParam String folderName, @RequestParam String userName) {
+		folderService.deleteFolder(userName, folderName);
 	}
 
 }

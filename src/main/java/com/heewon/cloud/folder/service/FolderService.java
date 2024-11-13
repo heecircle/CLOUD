@@ -133,4 +133,10 @@ public class FolderService {
 		return folderInfo;
 
 	}
+
+	@Transactional
+	public void deleteFolder(String userInfo, String path) {
+		FolderInfo folderInfo = findFolderRoot(userInfo, path);
+		folderInfoRepository.delete(folderInfo);
+	}
 }
