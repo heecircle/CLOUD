@@ -35,7 +35,7 @@ public class FileInfoController {
 		@RequestPart String savePath) throws
 		IOException {
 		fileInfoService.fileSave(file, userInfo, rootPath, savePath);
-
+		
 		return ResponseEntity.ok().body("success");
 	}
 

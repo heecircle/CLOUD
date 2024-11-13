@@ -22,6 +22,7 @@ public class FolderService {
 
 	private final FolderInfoRepository folderInfoRepository;
 	private final FileInfoRepository fileInfoRepository;
+	private final Long maxSize = 20L * 1024 * 1024 * 1024;
 
 	@Transactional
 	public void renameFolder(FolderRenameRequest renameRequest) {
@@ -45,7 +46,7 @@ public class FolderService {
 				.childrenFolder(new ArrayList<>())
 				.fileInfoList(new ArrayList<>())
 				.fileCnt(0)
-				.folderSize(0)
+				.folderSize(0L)
 				.folderCnt(0)
 				.userInfo(userInfo)
 				.build();
@@ -66,7 +67,7 @@ public class FolderService {
 				.childrenFolder(new ArrayList<>())
 				.fileInfoList(new ArrayList<>())
 				.fileCnt(0)
-				.folderSize(0)
+				.folderSize(0L)
 				.folderCnt(0)
 				.userInfo(userInfo)
 				.build();
@@ -108,7 +109,7 @@ public class FolderService {
 			.childrenFolder(new ArrayList<>())
 			.fileInfoList(new ArrayList<>())
 			.fileCnt(0)
-			.folderSize(0)
+			.folderSize(0L)
 			.folderCnt(0)
 			.userInfo(userInfo)
 			.build();
@@ -169,13 +170,44 @@ public class FolderService {
 
 	}
 
+	public FolderInfo findFolderRoot(String userInfo, String path, Long fileSize) {
+
+		FolderInfo folderInfo = folderInfoRepository.findFolderInfoByUserInfoAndFolderNameAndParentFolderIsNull(
+			userInfo,
+			"~");
+
+		if (folderInfo.getFolderSize() + fileSize > maxSize) {
+			throw new OutOfMemoryError("너무 큼");
+		}
+
+		String[] pathDir = path.split("/");
+
+		for (String dir : pathDir) {
+			boolean check = false;
+			for (FolderInfo child : folderInfo.getChildrenFolder()) {
+				if (child.getFolderName().equals(dir)) {
+					folderInfo = child;
+					check = true;
+					System.out.println(dir + "~~~~~~~~~~~~~~~~~");
+					break;
+				}
+			}
+			if (!check) {
+				throw new NotFoundException("경로가 잘못되었습니다.");
+			}
+		}
+
+		return folderInfo;
+
+	}
+
 	@Transactional
 	public void deleteFolder(String userInfo, String path) {
 		FolderInfo folderInfo = findFolderRoot(userInfo, path);
 		FolderInfo parent = folderInfo.getParentFolder();
 		int folderCnt = folderInfo.getFolderCnt();
 		int fileCnt = folderInfo.getFileCnt();
-		int folderSize = folderInfo.getFolderSize();
+		Long folderSize = folderInfo.getFolderSize();
 
 		while (parent != null) {
 			parent.calFolderSize(-folderSize);
@@ -223,7 +255,7 @@ public class FolderService {
 
 		oldFolder.getChildrenFolder().remove(curr);
 
-		int folderSize = curr.getFolderSize();
+		Long folderSize = curr.getFolderSize();
 		int folderCnt = curr.getFolderCnt() + 1;
 		int fileCnt = curr.getFileCnt();
 

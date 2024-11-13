@@ -20,6 +20,7 @@ import com.heewon.cloud.file.dto.FileGetResponse;
 import com.heewon.cloud.file.dto.FileMoveRequest;
 import com.heewon.cloud.file.repository.FileInfoRepository;
 import com.heewon.cloud.folder.domain.FolderInfo;
+import com.heewon.cloud.folder.repository.FolderInfoRepository;
 import com.heewon.cloud.folder.service.FolderService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class FileInfoService {
 	private final FileInfoRepository fileInfoRepository;
 	private final FolderService folderService;
 	private final String rootPath = System.getenv("ROOT_PATH");
+	private final FolderInfoRepository folderInfoRepository;
 
 	public FileInfo getFileInfo(String userInfo, String fileName) {
 		return fileInfoRepository.findFileInfoByNameAndUserInfo(fileName, userInfo);
@@ -39,7 +41,9 @@ public class FileInfoService {
 	public void fileSave(MultipartFile file, String userInfo, String rootPath, String savePath) throws IOException {
 
 		String fileName = file.getOriginalFilename();
-		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, savePath);
+		Long fileSize = file.getSize();
+
+		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, savePath, fileSize);
 
 		String type = "";
 		try {
@@ -76,6 +80,19 @@ public class FileInfoService {
 		if (!file.isEmpty() && file.getSize() > 0) {
 			String fullPath = rootPath + fileDescriptor + "." + type;
 			file.transferTo(new File(fullPath));
+		}
+
+		while (folderInfo != null) {
+			if (folderInfo == null) {
+				System.out.println("folder null");
+				break;
+			}
+
+			folderInfo.calFileCnt(1);
+			folderInfo.calFolderSize(fileSize);
+			folderInfoRepository.save(folderInfo);
+			folderInfo = folderInfo.getParentFolder();
+
 		}
 
 	}
