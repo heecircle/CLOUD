@@ -35,57 +35,91 @@ public class FolderService {
 	}
 
 	@Transactional
-	public void saveFolder(String rootName, String userInfo) {
-		FolderInfo folderInfo = folderInfoRepository.findFolderInfoByUserInfoAndFolderNameAndParentFolderIsNull(
+	public void saveFolder(String rootName, String name, String userInfo) {
+		FolderInfo parentInfo = folderInfoRepository.findFolderInfoByUserInfoAndFolderNameAndParentFolderIsNull(
 			userInfo, "~");
-		if (folderInfo == null) {
-			folderInfo = FolderInfo.builder()
+		if (parentInfo == null) {
+			parentInfo = FolderInfo.builder()
 				.folderName("~")
 				.parentFolder(null)
 				.childrenFolder(new ArrayList<>())
 				.fileInfoList(new ArrayList<>())
+				.fileCnt(0)
+				.folderSize(0)
+				.folderCnt(0)
 				.userInfo(userInfo)
 				.build();
-			folderInfoRepository.save(folderInfo);
+			folderInfoRepository.save(parentInfo);
 		}
 
 		String[] folders = rootName.split("/");
 
-		if (folders.length == 0) {
-			folderInfo.getChildrenFolder().add(folderInfo);
+		if (rootName.equals("")) {
+			for (FolderInfo folderInfo : parentInfo.getChildrenFolder()) {
+				if (folderInfo.getFolderName().equals(name)) {
+					throw new FileSystemAlreadyExistsException("이미 존재하는 파일입니다.");
+				}
+			}
+
+			FolderInfo newFolder = FolderInfo.builder().folderName(name)
+				.parentFolder(parentInfo)
+				.childrenFolder(new ArrayList<>())
+				.fileInfoList(new ArrayList<>())
+				.fileCnt(0)
+				.folderSize(0)
+				.folderCnt(0)
+				.userInfo(userInfo)
+				.build();
+
+			folderInfoRepository.save(newFolder);
+
+			parentInfo.getChildrenFolder().add(newFolder);
+			parentInfo.calFolderCnt(1);
+			return;
 		}
 
 		int pos = 0;
+
 		while (pos != folders.length) {
 
 			boolean isExist = false;
-			for (FolderInfo info : folderInfo.getChildrenFolder()) {
+			for (FolderInfo info : parentInfo.getChildrenFolder()) {
 				if (info.getFolderName().equals(folders[pos])) {
 					isExist = true;
-					folderInfo = info;
+					parentInfo = info;
 				}
 			}
 
 			if (!isExist) {
-
-				FolderInfo nextFolderInfo = FolderInfo.builder()
-					.parentFolder(folderInfo)
-					.folderName(folders[pos])
-					.userInfo(userInfo)
-					.childrenFolder(new ArrayList<>())
-					.fileInfoList(new ArrayList<>())
-					.build();
-
-				folderInfoRepository.save(nextFolderInfo);
-
-				folderInfo.getChildrenFolder().add(nextFolderInfo);
-
-				folderInfo = nextFolderInfo;
-
+				throw new NotFoundException("존재하지 않는 폴더 입니다.");
 			}
 			pos++;
 
 		}
+
+		for (FolderInfo folderInfo : parentInfo.getChildrenFolder()) {
+			if (folderInfo.getFolderName().equals(name)) {
+				throw new FileSystemAlreadyExistsException("이미 존재하는 파일입니다.");
+			}
+		}
+
+		FolderInfo newFolder = FolderInfo.builder().folderName(name)
+			.parentFolder(parentInfo)
+			.childrenFolder(new ArrayList<>())
+			.fileInfoList(new ArrayList<>())
+			.fileCnt(0)
+			.folderSize(0)
+			.folderCnt(0)
+			.userInfo(userInfo)
+			.build();
+
+		folderInfoRepository.save(newFolder);
+		parentInfo.getChildrenFolder().add(newFolder);
+
+		do {
+			parentInfo.calFolderCnt(1);
+			parentInfo = parentInfo.getParentFolder();
+		} while (parentInfo != null);
 
 	}
 
@@ -138,18 +172,28 @@ public class FolderService {
 	@Transactional
 	public void deleteFolder(String userInfo, String path) {
 		FolderInfo folderInfo = findFolderRoot(userInfo, path);
+		FolderInfo parent = folderInfo.getParentFolder();
+		int folderCnt = folderInfo.getFolderCnt();
+		int fileCnt = folderInfo.getFileCnt();
+		int folderSize = folderInfo.getFolderSize();
+
+		while (parent != null) {
+			parent.calFolderSize(-folderSize);
+			parent.calFileCnt(-fileCnt - 1);
+			parent.calFolderCnt(-folderCnt);
+			parent = parent.getParentFolder();
+		}
+
 		folderInfoRepository.delete(folderInfo);
 	}
 
+	@Transactional
 	public void moveFolder(String userInfo, String oldPath, String newPath, String folderName) {
-		System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-		System.out.println(userInfo + " " + oldPath + " " + newPath + " " + folderName);
 		FolderInfo oldFolder = null;
 		FolderInfo newFolder = null;
 
 		newFolder = findFolderRoot(userInfo, newPath);
 		oldFolder = findFolderRoot(userInfo, oldPath);
-		// System.out.println(oldFolder + " " + newFolder);
 
 		if (oldFolder == null) {
 			System.out.println("old folder is null");
@@ -157,10 +201,6 @@ public class FolderService {
 		if (newFolder == null) {
 			System.out.println("new folder is null");
 		}
-
-		// if (oldFolder == null || newFolder == null) {
-		// 	throw new NotFoundException("존재하지 않는 폴더입니다.");
-		// }
 
 		FolderInfo curr = null;
 
@@ -177,18 +217,36 @@ public class FolderService {
 			}
 		}
 
-		oldFolder.getChildrenFolder().remove(curr);
-
 		if (curr == null) {
 			throw new NotFoundException("존재하지 않는 폴더입니다.");
+		}
+
+		oldFolder.getChildrenFolder().remove(curr);
+
+		int folderSize = curr.getFolderSize();
+		int folderCnt = curr.getFolderCnt() + 1;
+		int fileCnt = curr.getFileCnt();
+
+		while (true) {
+			oldFolder.calFolderSize(-folderSize);
+			oldFolder.calFolderCnt(-folderCnt);
+			oldFolder.calFileCnt(-fileCnt);
+			if (oldFolder.getParentFolder() == null)
+				break;
+			oldFolder = oldFolder.getParentFolder();
 		}
 
 		curr.setParentFolder(newFolder);
 		newFolder.getChildrenFolder().add(curr);
 
-		folderInfoRepository.save(curr);
-		folderInfoRepository.save(oldFolder);
-		folderInfoRepository.save(newFolder);
+		while (true) {
+			newFolder.calFolderSize(folderSize);
+			newFolder.calFolderCnt(folderCnt);
+			newFolder.calFileCnt(fileCnt);
+			if (newFolder.getParentFolder() == null)
+				break;
+			newFolder = newFolder.getParentFolder();
+		}
 
 	}
 }

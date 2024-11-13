@@ -2,6 +2,7 @@ package com.heewon.cloud.folder.domain;
 
 import java.util.List;
 
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.heewon.cloud.common.base.BaseTimeEntity;
@@ -54,5 +55,29 @@ public class FolderInfo extends BaseTimeEntity {
 	@JoinColumn
 	@OneToMany(cascade = CascadeType.REMOVE)
 	private List<FileInfo> fileInfoList;
+
+	@ColumnDefault("0")
+	@Column
+	private Integer folderSize;
+
+	@ColumnDefault("0")
+	@Column
+	private Integer folderCnt;
+
+	@ColumnDefault("0")
+	@Column
+	private Integer fileCnt;
+
+	public void calFolderCnt(int cnt) {
+		this.folderCnt += cnt;
+	}
+
+	public void calFileCnt(int cnt) {
+		this.fileCnt += cnt;
+	}
+
+	public void calFolderSize(int size) {
+		this.folderSize = size;
+	}
 
 }
