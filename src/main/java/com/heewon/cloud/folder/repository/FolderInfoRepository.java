@@ -7,5 +7,5 @@ import com.heewon.cloud.folder.domain.FolderInfo;
 
 @Repository
 public interface FolderInfoRepository extends JpaRepository<FolderInfo, Long> {
-	FolderInfo findFolderInfoByUserInfoAndFolderName(String userInfo, String folderName);
+	FolderInfo findFolderInfoByUserInfoAndFolderNameAndParentFolderIsNull(String userInfo, String folderName);
 }

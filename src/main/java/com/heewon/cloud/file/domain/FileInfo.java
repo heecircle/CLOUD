@@ -41,15 +41,16 @@ public class FileInfo extends BaseTimeEntity {
 	@Column
 	private String type; // 파일 종류
 
-	@JoinColumn(nullable = true)
+	@JoinColumn
 	@ManyToOne
 	private FolderInfo parentFolder; // 파일
 
 	@Builder
-	public FileInfo(String userInfo, Long size, String name, String type) {
+	public FileInfo(String userInfo, Long size, String name, String type, FolderInfo folderInfo) {
 		this.userInfo = userInfo;
 		this.size = size;
 		this.name = name;
 		this.type = type;
+		this.parentFolder = folderInfo;
 	}
 }

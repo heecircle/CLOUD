@@ -28,17 +28,19 @@ public class FileInfoController {
 	private final FileInfoService fileInfoService;
 
 	@PostMapping("/save")
-	public ResponseEntity<String> save(@RequestPart MultipartFile file, @RequestPart String userInfo) throws
+	public ResponseEntity<String> save(@RequestPart MultipartFile file, @RequestPart String userInfo,
+		@RequestPart String savePath) throws
 		IOException {
-		fileInfoService.fileSave(file, userInfo, rootPath);
+		fileInfoService.fileSave(file, userInfo, rootPath, savePath);
 
 		return ResponseEntity.ok().body("success");
 	}
 
 	@GetMapping("/get")
-	public ResponseEntity<Resource> get(@RequestParam String fileName, @RequestParam String userInfo) throws
+	public ResponseEntity<Resource> get(@RequestParam String fileName, @RequestParam String userInfo,
+		@RequestParam String rootPath) throws
 		UnsupportedEncodingException {
-		FileGetResponse fileInfoResponse = fileInfoService.getFile(userInfo, fileName);
+		FileGetResponse fileInfoResponse = fileInfoService.getFile(userInfo, fileName, rootPath);
 
 		return ResponseEntity.ok()
 			.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileInfoResponse.getFileName() + "\"")
