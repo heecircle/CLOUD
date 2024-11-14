@@ -20,6 +20,7 @@ import com.heewon.cloud.file.dto.FileGetResponse;
 import com.heewon.cloud.file.dto.FileMoveRequest;
 import com.heewon.cloud.file.repository.FileInfoRepository;
 import com.heewon.cloud.folder.domain.FolderInfo;
+import com.heewon.cloud.folder.repository.FolderInfoRepository;
 import com.heewon.cloud.folder.service.FolderService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class FileInfoService {
 	private final FileInfoRepository fileInfoRepository;
 	private final FolderService folderService;
 	private final String rootPath = System.getenv("ROOT_PATH");
+	private final FolderInfoRepository folderInfoRepository;
 
 	public FileInfo getFileInfo(String userInfo, String fileName) {
 		return fileInfoRepository.findFileInfoByNameAndUserInfo(fileName, userInfo);
@@ -39,7 +41,9 @@ public class FileInfoService {
 	public void fileSave(MultipartFile file, String userInfo, String rootPath, String savePath) throws IOException {
 
 		String fileName = file.getOriginalFilename();
-		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, savePath);
+		Long fileSize = file.getSize();
+
+		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, savePath, fileSize);
 
 		String type = "";
 		try {
@@ -76,6 +80,19 @@ public class FileInfoService {
 		if (!file.isEmpty() && file.getSize() > 0) {
 			String fullPath = rootPath + fileDescriptor + "." + type;
 			file.transferTo(new File(fullPath));
+		}
+
+		while (folderInfo != null) {
+			if (folderInfo == null) {
+				System.out.println("folder null");
+				break;
+			}
+
+			folderInfo.calFileCnt(1);
+			folderInfo.calFolderSize(fileSize);
+			folderInfoRepository.save(folderInfo);
+			folderInfo = folderInfo.getParentFolder();
+
 		}
 
 	}
@@ -154,6 +171,58 @@ public class FileInfoService {
 
 		getNextFolder.getFileInfoList().add(fileInfo);
 		fileInfo.setParentFolder(getNextFolder);
+
+		while (folderInfo != null) {
+			folderInfo.calFileCnt(-1);
+			folderInfoRepository.save(folderInfo);
+			folderInfo = folderInfo.getParentFolder();
+		}
+
+		while (getNextFolder != null) {
+			getNextFolder.calFileCnt(1);
+			folderInfoRepository.save(getNextFolder);
+			getNextFolder = getNextFolder.getParentFolder();
+		}
+
+	}
+
+	public void fileDelete(String userInfo, String fileName, String folderName) {
+		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, folderName);
+		if (folderInfo == null) {
+			throw new NotFoundException("존재하지 않는 폴더입니다.");
+		}
+		FileInfo fileInfo = null;
+		for (FileInfo child : folderInfo.getFileInfoList()) {
+			if (child.getName().equals(fileName)) {
+				fileInfo = child;
+				break;
+			}
+		}
+
+		if (fileInfo == null) {
+			throw new NotFoundException("존재하지 않는 파일입니다.");
+		}
+		folderInfo.getFileInfoList().remove(fileInfo);
+
+		while (folderInfo != null) {
+			folderInfo.calFileCnt(-1);
+			folderInfoRepository.save(folderInfo);
+			folderInfo = folderInfo.getParentFolder();
+		}
+		String filePath = rootPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
+		System.out.println(filePath);
+		try {
+			File file = new File(filePath);
+			if (file.delete()) {
+				System.out.println("파일 삭제 완료");
+			} else {
+				System.out.println("파일 삭제 실패");
+			}
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+
+		fileInfoRepository.delete(fileInfo);
 
 	}
 

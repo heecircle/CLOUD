@@ -58,7 +58,7 @@ public class FolderInfo extends BaseTimeEntity {
 
 	@ColumnDefault("0")
 	@Column
-	private Integer folderSize;
+	private Long folderSize;
 
 	@ColumnDefault("0")
 	@Column
@@ -76,8 +76,8 @@ public class FolderInfo extends BaseTimeEntity {
 		this.fileCnt += cnt;
 	}
 
-	public void calFolderSize(int size) {
-		this.folderSize = size;
+	public void calFolderSize(Long size) {
+		this.folderSize += size;
 	}
 
 }
