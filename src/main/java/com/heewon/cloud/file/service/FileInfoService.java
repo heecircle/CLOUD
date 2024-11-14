@@ -6,6 +6,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -33,6 +35,17 @@ public class FileInfoService {
 	private final String rootPath = System.getenv("ROOT_PATH");
 	private final FolderInfoRepository folderInfoRepository;
 
+	public String fileType(String type) {
+
+		return switch (type) {
+			case "png" -> MediaType.IMAGE_PNG_VALUE;
+			case "jpg", "jpeg" -> MediaType.IMAGE_JPEG_VALUE;
+			case "gif" -> MediaType.IMAGE_GIF_VALUE;
+			default -> MediaType.APPLICATION_OCTET_STREAM_VALUE;
+		};
+
+	}
+
 	public FileInfo getFileInfo(String userInfo, String fileName) {
 		return fileInfoRepository.findFileInfoByNameAndUserInfo(fileName, userInfo);
 	}
@@ -40,21 +53,27 @@ public class FileInfoService {
 	@Transactional
 	public void fileSave(MultipartFile file, String userInfo, String rootPath, String savePath) throws IOException {
 
-		String fileName = file.getOriginalFilename();
 		Long fileSize = file.getSize();
 
-		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, savePath, fileSize);
+		FolderInfo folderInfo = folderService.findFolder(userInfo, savePath, fileSize);
+		if (folderInfo == null) {
+			throw new NotFoundException("존재하지 않는 폴더~");
+		}
+		fileSaveApply(folderInfo, rootPath, file);
 
+	}
+
+	public void fileSaveApply(FolderInfo folderInfo, String rootPath, MultipartFile file) throws
+
+		IOException {
+		Long fileSize = file.getSize();
+		String fileName = file.getOriginalFilename();
 		String type = "";
 		try {
 			assert fileName != null;
 			type = fileName.substring(fileName.lastIndexOf(".") + 1);
 		} catch (NullPointerException e) {
 			System.out.println("확장자 명이 없습니다.");
-		}
-
-		if (folderInfo == null) {
-			throw new NotFoundException("존재하지 않는 폴더입니다.");
 		}
 
 		for (FileInfo child : folderInfo.getFileInfoList()) {
@@ -67,7 +86,7 @@ public class FileInfoService {
 			.name(fileName)
 			.size(file.getSize())
 			.type(type)
-			.userInfo(userInfo)
+			.userInfo(folderInfo.getUserInfo())
 			.folderInfo(folderInfo)
 			.build();
 
@@ -83,27 +102,24 @@ public class FileInfoService {
 		}
 
 		while (folderInfo != null) {
-			if (folderInfo == null) {
-				System.out.println("folder null");
-				break;
-			}
-
 			folderInfo.calFileCnt(1);
 			folderInfo.calFolderSize(fileSize);
 			folderInfoRepository.save(folderInfo);
 			folderInfo = folderInfo.getParentFolder();
-
 		}
-
 	}
 
 	public FileGetResponse getFile(String userInfo, String fileName, String folderName) throws
 		UnsupportedEncodingException {
-		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, folderName);
-
+		FolderInfo folderInfo = folderService.findFolder(userInfo, folderName);
 		if (folderInfo == null) {
-			throw new NotFoundException("존재하지 않는 폴더 입니다.");
+			throw new NotFoundException("존재하지 않는 폴더");
 		}
+
+		return getFileApply(folderInfo, fileName);
+	}
+
+	public FileGetResponse getFileApply(FolderInfo folderInfo, String fileName) throws UnsupportedEncodingException {
 		FileInfo fileInfo = null;
 		for (FileInfo child : folderInfo.getFileInfoList()) {
 			if (child.getName().equals(fileName)) {
@@ -115,7 +131,6 @@ public class FileInfoService {
 		if (fileInfo == null) {
 			throw new NotFoundException("존재하지 않는 파일입니다.");
 		}
-
 		String saveFileName = rootPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
 		String originalFileName = URLEncoder.encode(fileInfo.getName(), StandardCharsets.UTF_8.toString());
 
@@ -129,21 +144,15 @@ public class FileInfoService {
 			.resource(resource).build();
 	}
 
-	public String fileType(String type) {
-
-		return switch (type) {
-			case "png" -> MediaType.IMAGE_PNG_VALUE;
-			case "jpg", "jpeg" -> MediaType.IMAGE_JPEG_VALUE;
-			case "gif" -> MediaType.IMAGE_GIF_VALUE;
-			default -> MediaType.APPLICATION_OCTET_STREAM_VALUE;
-		};
-
-	}
+	/**
+	 * 파일 옮기기
+	 * @param fileMoveRequest
+	 */
 
 	@Transactional
 	public void fileMove(FileMoveRequest fileMoveRequest) {
-		FolderInfo folderInfo = folderService.findFolderRoot(fileMoveRequest.getUserInfo(), fileMoveRequest.getFrom());
-		FolderInfo getNextFolder = folderService.findFolderRoot(fileMoveRequest.getUserInfo(), fileMoveRequest.getTo());
+		FolderInfo folderInfo = folderService.findFolder(fileMoveRequest.getUserInfo(), fileMoveRequest.getFrom());
+		FolderInfo getNextFolder = folderService.findFolder(fileMoveRequest.getUserInfo(), fileMoveRequest.getTo());
 		FileInfo fileInfo = null;
 
 		if (getNextFolder == null) {
@@ -163,11 +172,15 @@ public class FileInfoService {
 			}
 		}
 
-		folderInfo.getFileInfoList().remove(fileInfo);
-
 		if (fileInfo == null) {
 			throw new NotFoundException("파일이 존재하지 않습니다.");
 		}
+		fileMoveApply(folderInfo, getNextFolder, fileInfo);
+	}
+
+	@Transactional
+	public void fileMoveApply(FolderInfo folderInfo, FolderInfo getNextFolder, FileInfo fileInfo) {
+		folderInfo.getFileInfoList().remove(fileInfo);
 
 		getNextFolder.getFileInfoList().add(fileInfo);
 		fileInfo.setParentFolder(getNextFolder);
@@ -183,11 +196,17 @@ public class FileInfoService {
 			folderInfoRepository.save(getNextFolder);
 			getNextFolder = getNextFolder.getParentFolder();
 		}
-
 	}
 
+	/**
+	 * 파일 삭제
+	 * @param userInfo
+	 * @param fileName
+	 * @param folderName
+	 */
+
 	public void fileDelete(String userInfo, String fileName, String folderName) {
-		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, folderName);
+		FolderInfo folderInfo = folderService.findFolder(userInfo, folderName);
 		if (folderInfo == null) {
 			throw new NotFoundException("존재하지 않는 폴더입니다.");
 		}
@@ -202,6 +221,11 @@ public class FileInfoService {
 		if (fileInfo == null) {
 			throw new NotFoundException("존재하지 않는 파일입니다.");
 		}
+		fileDeleteApply(folderInfo, fileInfo);
+
+	}
+
+	public void fileDeleteApply(FolderInfo folderInfo, FileInfo fileInfo) {
 		folderInfo.getFileInfoList().remove(fileInfo);
 
 		while (folderInfo != null) {
@@ -210,20 +234,14 @@ public class FileInfoService {
 			folderInfo = folderInfo.getParentFolder();
 		}
 		String filePath = rootPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
-		System.out.println(filePath);
+
 		try {
-			File file = new File(filePath);
-			if (file.delete()) {
-				System.out.println("파일 삭제 완료");
-			} else {
-				System.out.println("파일 삭제 실패");
-			}
+			Files.delete(Path.of(filePath));
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 
 		fileInfoRepository.delete(fileInfo);
-
 	}
 
 }
