@@ -3,9 +3,9 @@ package com.heewon.cloud.link.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.heewon.cloud.link.domain.Link;
+import com.heewon.cloud.link.domain.LinkInfo;
 
 @Repository
-public interface LinkRepository extends JpaRepository<Link, Long> {
-
+public interface LinkInfoRepository extends JpaRepository<LinkInfo, Long> {
+	LinkInfo findLinkInfoById(String id);
 }

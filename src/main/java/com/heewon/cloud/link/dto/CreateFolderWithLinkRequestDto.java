@@ -1,2 +1,4 @@
-package com.heewon.cloud.link.dto;public class CreateFolderWithLinkRequestDto {
+package com.heewon.cloud.link.dto;
+
+public class CreateFolderWithLinkRequestDto {
 }

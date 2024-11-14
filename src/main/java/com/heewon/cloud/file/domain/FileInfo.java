@@ -33,6 +33,7 @@ public class FileInfo extends BaseTimeEntity {
 	@Column
 	private Long size;
 
+	@Setter
 	@Column(nullable = false)
 	private String name; // 파일 이름
 

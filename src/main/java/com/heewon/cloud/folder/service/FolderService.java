@@ -150,7 +150,7 @@ public class FolderService {
 			.build();
 	}
 
-	public FolderInfo findFolderRoot(String userInfo, String path) {
+	public FolderInfo findFolder(String userInfo, String path) {
 
 		FolderInfo folderInfo = folderInfoRepository.findFolderInfoByUserInfoAndFolderNameAndParentFolderIsNull(
 			userInfo,
@@ -170,7 +170,7 @@ public class FolderService {
 
 	}
 
-	public FolderInfo findFolderRoot(String userInfo, String path, Long fileSize) {
+	public FolderInfo findFolder(String userInfo, String path, Long fileSize) {
 
 		FolderInfo folderInfo = folderInfoRepository.findFolderInfoByUserInfoAndFolderNameAndParentFolderIsNull(
 			userInfo,
@@ -188,7 +188,6 @@ public class FolderService {
 				if (child.getFolderName().equals(dir)) {
 					folderInfo = child;
 					check = true;
-					System.out.println(dir + "~~~~~~~~~~~~~~~~~");
 					break;
 				}
 			}
@@ -203,7 +202,7 @@ public class FolderService {
 
 	@Transactional
 	public void deleteFolder(String userInfo, String path) {
-		FolderInfo folderInfo = findFolderRoot(userInfo, path);
+		FolderInfo folderInfo = findFolder(userInfo, path);
 		FolderInfo parent = folderInfo.getParentFolder();
 		int folderCnt = folderInfo.getFolderCnt();
 		int fileCnt = folderInfo.getFileCnt();
@@ -224,8 +223,8 @@ public class FolderService {
 		FolderInfo oldFolder = null;
 		FolderInfo newFolder = null;
 
-		newFolder = findFolderRoot(userInfo, newPath);
-		oldFolder = findFolderRoot(userInfo, oldPath);
+		newFolder = findFolder(userInfo, newPath);
+		oldFolder = findFolder(userInfo, oldPath);
 
 		if (oldFolder == null) {
 			System.out.println("old folder is null");

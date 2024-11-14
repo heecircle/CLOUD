@@ -13,24 +13,30 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class Link extends BaseTimeEntity {
+public class LinkInfo extends BaseTimeEntity {
 
 	@Id
+	@Getter
 	@GeneratedValue(strategy = GenerationType.UUID)
-	private Long id;
+	private String id;
 
-	private String url;
+	// @Getter
+	// @GeneratedValue(strategy = GenerationType.UUID)
+	// private String url;
 
+	@Getter
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(nullable = true)
 	private FolderInfo folder;
 
+	@Getter
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(nullable = true)
 	private FileInfo file;
