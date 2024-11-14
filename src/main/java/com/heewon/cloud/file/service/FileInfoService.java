@@ -172,6 +172,18 @@ public class FileInfoService {
 		getNextFolder.getFileInfoList().add(fileInfo);
 		fileInfo.setParentFolder(getNextFolder);
 
+		while (folderInfo != null) {
+			folderInfo.calFileCnt(-1);
+			folderInfoRepository.save(folderInfo);
+			folderInfo = folderInfo.getParentFolder();
+		}
+
+		while (getNextFolder != null) {
+			getNextFolder.calFileCnt(1);
+			folderInfoRepository.save(getNextFolder);
+			getNextFolder = getNextFolder.getParentFolder();
+		}
+
 	}
 
 	public void fileDelete(String userInfo, String fileName, String folderName) {
