@@ -30,9 +30,6 @@ public class FileInfo extends BaseTimeEntity {
 	@Column(nullable = false)
 	private String userInfo;
 
-	// @Column
-	// 파일 위치
-
 	@Column
 	private Long size;
 

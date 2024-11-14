@@ -174,4 +174,44 @@ public class FileInfoService {
 
 	}
 
+	public void fileDelete(String userInfo, String fileName, String folderName) {
+		FolderInfo folderInfo = folderService.findFolderRoot(userInfo, folderName);
+		if (folderInfo == null) {
+			throw new NotFoundException("존재하지 않는 폴더입니다.");
+		}
+		FileInfo fileInfo = null;
+		for (FileInfo child : folderInfo.getFileInfoList()) {
+			if (child.getName().equals(fileName)) {
+				fileInfo = child;
+				break;
+			}
+		}
+
+		if (fileInfo == null) {
+			throw new NotFoundException("존재하지 않는 파일입니다.");
+		}
+		folderInfo.getFileInfoList().remove(fileInfo);
+
+		while (folderInfo != null) {
+			folderInfo.calFileCnt(-1);
+			folderInfoRepository.save(folderInfo);
+			folderInfo = folderInfo.getParentFolder();
+		}
+		String filePath = rootPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
+		System.out.println(filePath);
+		try {
+			File file = new File(filePath);
+			if (file.delete()) {
+				System.out.println("파일 삭제 완료");
+			} else {
+				System.out.println("파일 삭제 실패");
+			}
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+
+		fileInfoRepository.delete(fileInfo);
+
+	}
+
 }

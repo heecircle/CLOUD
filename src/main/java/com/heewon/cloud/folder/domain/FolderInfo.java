@@ -56,7 +56,7 @@ public class FolderInfo extends BaseTimeEntity {
 	@OneToMany(cascade = CascadeType.REMOVE)
 	private List<FileInfo> fileInfoList;
 
-	@ColumnDefault("0L")
+	@ColumnDefault("0")
 	@Column
 	private Long folderSize;
 

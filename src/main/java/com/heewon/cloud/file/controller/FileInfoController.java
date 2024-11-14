@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.heewon.cloud.file.dto.FileDeleteRequestDto;
 import com.heewon.cloud.file.dto.FileGetResponse;
 import com.heewon.cloud.file.dto.FileMoveRequest;
 import com.heewon.cloud.file.service.FileInfoService;
@@ -35,7 +37,7 @@ public class FileInfoController {
 		@RequestPart String savePath) throws
 		IOException {
 		fileInfoService.fileSave(file, userInfo, rootPath, savePath);
-		
+
 		return ResponseEntity.ok().body("success");
 	}
 
@@ -54,5 +56,11 @@ public class FileInfoController {
 	@PatchMapping("/move")
 	public void move(@RequestBody FileMoveRequest fileMoveRequest) {
 		fileInfoService.fileMove(fileMoveRequest);
+	}
+
+	@DeleteMapping("/delete")
+	public void delete(@RequestBody FileDeleteRequestDto fileDeleteRequestDto) {
+		fileInfoService.fileDelete(fileDeleteRequestDto.getUserInfo(), fileDeleteRequestDto.getFileName(),
+			fileDeleteRequestDto.getFilePath());
 	}
 }
