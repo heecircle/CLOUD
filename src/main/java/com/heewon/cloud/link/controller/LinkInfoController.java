@@ -26,6 +26,7 @@ import com.heewon.cloud.link.dto.LinkDto;
 import com.heewon.cloud.link.service.FileLinkService;
 import com.heewon.cloud.link.service.LinkInfoService;
 
+import jakarta.transaction.NotSupportedException;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -64,7 +65,7 @@ public class LinkInfoController {
 	@LinkAvailable
 	@PostMapping("/file/upload")
 	public void uploadFileWithLink(@RequestPart LinkDto<String> linkDto, @RequestPart MultipartFile file) throws
-		IOException {
+		IOException, NotSupportedException {
 		fileLinkService.fileMake(linkDto.getLinkInfo(), file);
 	}
 

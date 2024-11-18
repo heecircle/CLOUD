@@ -1,7 +1,6 @@
 package com.heewon.cloud.folder.dto;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,15 +9,12 @@ import lombok.NoArgsConstructor;
 
 @Builder
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor
-public class FolderInfoResponse {
-	List<String> folderList;
-	List<FileInfoResponse> fileList;
-
-	LocalDateTime createdAt;
+@AllArgsConstructor
+public class FileInfoResponse {
+	String fileName;
+	String fileType;
+	String thumbnailPath;
 	LocalDateTime updatedAt;
 
-	String path;
-	String userInfo;
 }

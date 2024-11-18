@@ -22,6 +22,7 @@ import com.heewon.cloud.folder.domain.FolderInfo;
 import com.heewon.cloud.link.domain.LinkInfo;
 import com.heewon.cloud.link.repository.LinkInfoRepository;
 
+import jakarta.transaction.NotSupportedException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -58,7 +59,7 @@ public class FileLinkService {
 			.resource(resource).build();
 	}
 
-	public void fileMake(LinkInfo linkInfo, MultipartFile file) throws IOException {
+	public void fileMake(LinkInfo linkInfo, MultipartFile file) throws IOException, NotSupportedException {
 		FolderInfo folderInfo = linkInfo.getFolder();
 		fileInfoService.fileSaveApply(folderInfo, rootPath, file);
 	}

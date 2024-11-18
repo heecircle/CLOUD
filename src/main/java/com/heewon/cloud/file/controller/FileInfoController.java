@@ -22,6 +22,7 @@ import com.heewon.cloud.file.dto.FileGetResponse;
 import com.heewon.cloud.file.dto.FileMoveRequest;
 import com.heewon.cloud.file.service.FileInfoService;
 
+import jakarta.transaction.NotSupportedException;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -29,13 +30,13 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/file")
 public class FileInfoController {
 
-	static final String rootPath = System.getenv("ROOT_PATH");
+	private static final String rootPath = System.getenv("ROOT_PATH");
 	private final FileInfoService fileInfoService;
 
 	@PostMapping("/save")
 	public ResponseEntity<String> save(@RequestPart MultipartFile file, @RequestPart String userInfo,
 		@RequestPart String savePath) throws
-		IOException {
+		IOException, NotSupportedException {
 		fileInfoService.fileSave(file, userInfo, rootPath, savePath);
 
 		return ResponseEntity.ok().body("success");
