@@ -1,9 +1,12 @@
 package com.heewon.cloud.link.service;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.cert.CertificateExpiredException;
+import java.time.LocalDateTime;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -19,6 +22,7 @@ import com.heewon.cloud.folder.domain.FolderInfo;
 import com.heewon.cloud.link.domain.LinkInfo;
 import com.heewon.cloud.link.repository.LinkInfoRepository;
 
+import jakarta.transaction.NotSupportedException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -28,10 +32,22 @@ public class FileLinkService {
 	private final FileInfoService fileInfoService;
 	private final String rootPath = System.getenv("ROOT_PATH");
 
-	public FileGetResponse getFile(LinkInfo linkInfo) throws UnsupportedEncodingException {
+	public FileGetResponse getFile(String linkString) throws CertificateExpiredException {
+		LinkInfo linkInfo = linkInfoRepository.findLinkInfoById(linkString);
+		if (linkInfo == null) {
+			throw new CertificateExpiredException("유효하지 않은 링크입니다.");
+		}
+		if (linkInfo.getCreateTime().plusHours(3).isBefore(LocalDateTime.now())) {
+			throw new CertificateExpiredException("유효하지 않은 링크 입니다.");
+		}
+
 		FileInfo fileInfo = linkInfo.getFile();
 		String saveFileName = rootPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
 		String originalFileName = URLEncoder.encode(fileInfo.getName(), StandardCharsets.UTF_8);
+		System.out.println(saveFileName);
+		if (!Files.exists(Path.of(saveFileName))) {
+			throw new NotFoundException("존재하지 않는 파일입니다.");
+		}
 
 		Resource resource = new FileSystemResource(
 			saveFileName);
@@ -43,7 +59,7 @@ public class FileLinkService {
 			.resource(resource).build();
 	}
 
-	public void fileMake(LinkInfo linkInfo, MultipartFile file) throws IOException {
+	public void fileMake(LinkInfo linkInfo, MultipartFile file) throws IOException, NotSupportedException {
 		FolderInfo folderInfo = linkInfo.getFolder();
 		fileInfoService.fileSaveApply(folderInfo, rootPath, file);
 	}
@@ -62,7 +78,7 @@ public class FileLinkService {
 
 	@Transactional
 	public void fileRename(LinkInfo linkInfo, String oldName, String newName) throws IOException {
-		
+
 		FileInfo fileInfo = null;
 		for (FileInfo info : linkInfo.getFolder().getFileInfoList()) {
 			if (info.getIdentifier().equals(oldName)) {

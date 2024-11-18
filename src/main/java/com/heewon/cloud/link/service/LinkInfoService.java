@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class LinkInfoService {
-	private final LinkInfoRepository fileLInkInfoRepository;
+	private final LinkInfoRepository linkInfoRepository;
 	private final FolderService folderService;
 
 	public String makeFileLink(String userInfo, String filePath, String fileName) {
@@ -33,7 +33,14 @@ public class LinkInfoService {
 			throw new NotFoundException("존재하지 않는 파일입니다.");
 		}
 		LinkInfo linkInfo = LinkInfo.builder().file(fileInfo).build();
-		fileLInkInfoRepository.save(linkInfo);
+		linkInfoRepository.save(linkInfo);
+		return linkInfo.getId();
+	}
+
+	public String makeFolderLink(String userInfo, String folderPath) {
+		FolderInfo folderInfo = folderService.findFolder(userInfo, folderPath);
+		LinkInfo linkInfo = LinkInfo.builder().folder(folderInfo).build();
+		linkInfoRepository.save(linkInfo);
 		return linkInfo.getId();
 	}
 }

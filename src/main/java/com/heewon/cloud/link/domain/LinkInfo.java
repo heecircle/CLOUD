@@ -41,4 +41,18 @@ public class LinkInfo extends BaseTimeEntity {
 	@JoinColumn(nullable = true)
 	private FileInfo file;
 
+	@Override
+	public String toString() {
+		String folderName = "";
+		if (folder != null) {
+			folderName = folder.getFolderName();
+		}
+
+		String fileName = "";
+		if (file != null) {
+			fileName = file.getName();
+		}
+
+		return id + " " + folderName + " " + fileName;
+	}
 }

@@ -1,6 +1,11 @@
 package com.heewon.cloud.folder.service;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 
 import org.springframework.stereotype.Service;
@@ -10,6 +15,7 @@ import org.webjars.NotFoundException;
 import com.heewon.cloud.file.domain.FileInfo;
 import com.heewon.cloud.file.repository.FileInfoRepository;
 import com.heewon.cloud.folder.domain.FolderInfo;
+import com.heewon.cloud.folder.dto.FileInfoResponse;
 import com.heewon.cloud.folder.dto.FolderInfoResponse;
 import com.heewon.cloud.folder.dto.FolderRenameRequest;
 import com.heewon.cloud.folder.repository.FolderInfoRepository;
@@ -22,6 +28,7 @@ public class FolderService {
 
 	private final FolderInfoRepository folderInfoRepository;
 	private final FileInfoRepository fileInfoRepository;
+	private final String thumbnailPath = System.getenv("ROOT_PATH") + "thumbnail/";
 	private final Long maxSize = 20L * 1024 * 1024 * 1024;
 
 	@Transactional
@@ -138,15 +145,40 @@ public class FolderService {
 				}
 			}
 		}
+		int folderSize = folderInfo.getChildrenFolder().size();
+		int fileSize = Math.min(100 - folderSize, folderInfo.getFileInfoList().size());
 
 		return FolderInfoResponse.builder().folderList(
-				folderInfo.getChildrenFolder().stream().map(FolderInfo::getFolderName).toList()
+				folderInfo.getChildrenFolder().stream().map(FolderInfo::getFolderName).toList().subList(0, folderSize)
 			).fileList(
-				folderInfo.getFileInfoList().stream().map(FileInfo::getName).toList()
+				folderInfo.getFileInfoList().stream().map(c -> {
+					try {
+						return findFileInfo(c);
+					} catch (UnsupportedEncodingException e) {
+						throw new RuntimeException(e);
+					}
+				}).toList().subList(0, fileSize)
 			).userInfo(userInfo)
 			.createdAt(folderInfo.getCreateTime())
 			.updatedAt(folderInfo.getUpdateTime())
 			.path(path)
+			.build();
+	}
+
+	public FileInfoResponse findFileInfo(FileInfo fileInfo) throws UnsupportedEncodingException {
+		String saveFileName = null;
+		if (fileInfo.getType().equals("jpg") || fileInfo.getType().equals("png") || fileInfo.getType().equals("jpeg")) {
+			saveFileName = thumbnailPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
+			if (!Files.exists(Path.of(saveFileName))) {
+				saveFileName = null;
+			}
+		}
+
+		return FileInfoResponse.builder()
+			.fileType(fileInfo.getType())
+			.updatedAt(fileInfo.getUpdateTime())
+			.fileName(URLEncoder.encode(fileInfo.getName(), StandardCharsets.UTF_8))
+			.thumbnailPath(saveFileName)
 			.build();
 	}
 

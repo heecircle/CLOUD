@@ -1,13 +1,17 @@
 package com.heewon.cloud.file.service;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import javax.imageio.ImageIO;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -17,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.webjars.NotFoundException;
 
+import net.coobird.thumbnailator.Thumbnails;
+
 import com.heewon.cloud.file.domain.FileInfo;
 import com.heewon.cloud.file.dto.FileGetResponse;
 import com.heewon.cloud.file.dto.FileMoveRequest;
@@ -25,6 +31,7 @@ import com.heewon.cloud.folder.domain.FolderInfo;
 import com.heewon.cloud.folder.repository.FolderInfoRepository;
 import com.heewon.cloud.folder.service.FolderService;
 
+import jakarta.transaction.NotSupportedException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -33,6 +40,7 @@ public class FileInfoService {
 	private final FileInfoRepository fileInfoRepository;
 	private final FolderService folderService;
 	private final String rootPath = System.getenv("ROOT_PATH");
+	private final String thumbnailPath = rootPath + "thumbnail/";
 	private final FolderInfoRepository folderInfoRepository;
 
 	public String fileType(String type) {
@@ -51,7 +59,9 @@ public class FileInfoService {
 	}
 
 	@Transactional
-	public void fileSave(MultipartFile file, String userInfo, String rootPath, String savePath) throws IOException {
+	public void fileSave(MultipartFile file, String userInfo, String rootPath, String savePath) throws
+		IOException,
+		NotSupportedException {
 
 		Long fileSize = file.getSize();
 
@@ -64,11 +74,15 @@ public class FileInfoService {
 	}
 
 	public void fileSaveApply(FolderInfo folderInfo, String rootPath, MultipartFile file) throws
-
-		IOException {
+		IOException, NotSupportedException {
 		Long fileSize = file.getSize();
 		String fileName = file.getOriginalFilename();
 		String type = "";
+
+		if (file.isEmpty() || file.getSize() <= 0) {
+			throw new NotSupportedException("파일의 크기가 너무 작습니다.");
+		}
+
 		try {
 			assert fileName != null;
 			type = fileName.substring(fileName.lastIndexOf(".") + 1);
@@ -98,7 +112,24 @@ public class FileInfoService {
 
 		if (!file.isEmpty() && file.getSize() > 0) {
 			String fullPath = rootPath + fileDescriptor + "." + type;
+			File imageFile = new File(fullPath);
+			if (imageFile.exists()) {
+				throw new FileAlreadyExistsException("이미 존재하는 파일입니다.");
+			}
 			file.transferTo(new File(fullPath));
+
+			String thumbnailPathResult = thumbnailPath + fileDescriptor + "." + type;
+			File thumbnailFile = new File(thumbnailPathResult);
+			if (thumbnailFile.exists()) {
+				throw new FileAlreadyExistsException("이미 존재하는 파일입니다.");
+			}
+			BufferedImage boImg = ImageIO.read(imageFile);
+			double ratio = 3;
+			int width = (int)(boImg.getWidth() / ratio);
+			int height = (int)(boImg.getHeight() / ratio);
+
+			Thumbnails.of(imageFile).size(width, height).toFile(thumbnailFile);
+
 		}
 
 		while (folderInfo != null) {
@@ -234,9 +265,10 @@ public class FileInfoService {
 			folderInfo = folderInfo.getParentFolder();
 		}
 		String filePath = rootPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
-
+		String thumbnailPath_ = thumbnailPath + fileInfo.getIdentifier() + "." + fileInfo.getType();
 		try {
 			Files.delete(Path.of(filePath));
+			Files.delete(Path.of(thumbnailPath_));
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
